@@ -1,5 +1,8 @@
-[![Build Status](https://travis-ci.org/spinscale/dropwizard-jobs.svg?branch=master)](https://travis-ci.org/spinscale/dropwizard-jobs)
-
+[![Build Status](https://travis-ci.org/dropwizard-jobs/dropwizard-jobs.svg?branch=master)](https://travis-ci.org/dropwizard-jobs/dropwizard-jobs)
+[![DepShield Badge](https://depshield.sonatype.org/badges/dropwizard-jobs/dropwizard-jobs/depshield.svg)](https://depshield.github.io)
+[![CodeFactor](https://www.codefactor.io/repository/github/dropwizard-jobs/dropwizard-jobs/badge)](https://www.codefactor.io/repository/github/dropwizard-jobs/dropwizard-jobs)
+[![Maintainability](https://api.codeclimate.com/v1/badges/71ea62844095d88b2264/maintainability)](https://codeclimate.com/github/dropwizard-jobs/dropwizard-jobs/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/71ea62844095d88b2264/test_coverage)](https://codeclimate.com/github/dropwizard-jobs/dropwizard-jobs/test_coverage)
 # Dropwizard quartz integration
 
 This plugin integrates the [quartz scheduler](http://quartz-scheduler.org/) with dropwizard and allows you to easily create background jobs, which are not bound to the HTTP request-response cycle.
@@ -19,9 +22,9 @@ It is located in Central Repository. http://search.maven.org/
 Add to your pom:
 ```xml
 <dependency>
-  <groupId>de.spinscale.dropwizard</groupId>
-  <artifactId>dropwizard-jobs-core</artifactId>
-  <version>3.0.0</version>
+  <groupId>io.github.dropwizard-jobs</groupId>
+  <artifactId>dropwizard-jobs</artifactId>
+  <version>4.0.0-RELEASE</version>
 </dependency>
 ```
 
@@ -50,16 +53,16 @@ argument and also throws a <code>JobExecutionException</code>.
 ## Installing the bundle from source code
 
 ```
-git clone https://github.com/spinscale/dropwizard-jobs
+git clone https://github.com/dropwizard-jobs/dropwizard-jobs
 cd dropwizard-jobs
-mvn install
+./mvn install
 ```
 
 After installing the plugin locally you can include it in your pom.xml
 
 ```xml
 <dependency>
-  <groupId>de.spinscale.dropwizard</groupId>
+  <groupId>io.github.dropwizard-jobs</groupId>
   <artifactId>dropwizard-jobs</artifactId>
   <version>$VERSION</version>
 </dependency>
@@ -236,14 +239,18 @@ This property is not supported in the `@OnApplicationStart` or `@ApplicationStop
 
 ## Configuring jobs in the Dropwizard Config File
 
-As of 1.0.2, the period for @Every jobs can be read from the dropwizard config file instead of being hard-coded. The YAML looks like this:
+The period for `@Every` and `@On` jobs can be read from the dropwizard config file instead of being hard-coded. The YAML looks like this:
 
 ```
 jobs:
   myJob: 10s
   myOtherJob: 20s
-  cronJob: "0 0/3 0 ? * * *"
+  cronJob: "0 0/3 0 ? * * * [Europe/London]"
 ```
+
+For `@On` jobs, the cron expression can have an optional timezone specified in square brackets.
+If no timezone is given, the `de.spinscale.dropwizard.jobs.timezone` system property will be used,
+otherwise your server's default timezone will apply.
 
 Where MyJob and MyOtherJob are the names of Job classes in the application. In the <code>Configuration</code> class add the corresponding property:
 
