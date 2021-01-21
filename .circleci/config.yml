@@ -1,0 +1,89 @@
+version: 2.1
+
+orbs:
+  aws-ecr: circleci/aws-ecr@6.1.0
+
+executors:
+  mvn:
+    docker:
+      - image: ${AWS_ECR_ACCOUNT_URL}/maven-build:latest
+
+aliases:
+  - &restore_maven_cache
+    name: Restore the .m2 cache
+    keys:
+      - v1-mvn-{{ checksum "pom.xml" }}
+  - &save_maven_cache
+    name: Save the .m2 cache
+    key: v1-mvn-{{ checksum "pom.xml" }}
+    paths:
+      - ~/.m2/repository
+  - &restore_owasp_cache
+    name: Restore OWASP data cache
+    keys:
+      - v3-cve-{{ checksum "/tmp/owasp-cache-key-file" }}
+  - &save_owasp_cache
+    name: Save OWASP data cache
+    key: v3-cve-{{ checksum "/tmp/owasp-cache-key-file" }}
+    paths:
+      - ~/.m2/repository/org/owasp/dependency-check-data
+  - &fetch_maven_settings
+    name: "Fetch the maven settings file"
+    command: |
+      curl -u "${ARTIFACTORY_USER}:${ARTIFACTORY_API_KEY}" https://cizettle.jfrog.io/cizettle/maven-settings/settings.xml -o ~/.m2/settings.xml
+  - &save_test_results
+    name: Save test results
+    command: |
+      mkdir -p ~/test-results/junit/
+      find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/test-results/junit/ \;
+    when: always
+
+jobs:
+  build_test:
+    executor: mvn
+
+    steps:
+      - checkout
+      - run: *fetch_maven_settings
+      - restore_cache: *restore_maven_cache
+      - run:
+          name: Build and test the code
+          command: mvn -Pit -C -B clean install -T1C
+      - save_cache: *save_maven_cache
+      - run: *save_test_results
+      - store_test_results:
+          path: ~/test-results
+      - store_artifacts:
+          path: ~/test-results/junit
+      - persist_to_workspace:
+          root: ~/project
+          paths:
+            - .
+
+  vulnerability_checks:
+    executor: mvn
+
+    steps:
+      - checkout
+      - run: *fetch_maven_settings
+      - restore_cache: *restore_maven_cache
+      - run:
+          name: Generate OWASP cache key file based on today's date
+          command: |
+            echo $(date +"%Y.%m.%d") > /tmp/owasp-cache-key-file
+      - restore_cache: *restore_owasp_cache
+      - run:
+          name: Run vulnerability checks
+          command: mvn -DskipTests -Pdep-vuln-check,static-analysis -B verify
+      - save_cache: *save_owasp_cache
+
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build_test:
+          context: Java
+
+      - vulnerability_checks:
+          context: Java
